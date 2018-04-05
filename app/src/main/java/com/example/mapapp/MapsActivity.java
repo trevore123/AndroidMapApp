@@ -99,16 +99,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Get the message from the intent
         Intent intent = getIntent();
         String location = intent.getStringExtra(MainActivity.LOCATION);
+        String mode = intent.getStringExtra(MainActivity.MODE);
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
         List<Address> addresses = null;
         try{
             addresses = geocoder.getFromLocationName(location, 1);
         }
         catch(IOException exception) { //any I/O issues
-//            Log.v("MapsActivity", "IOException");
+            System.out.println("IOException");
         } catch (IllegalArgumentException exception) { //invalid latitude or longitude values
-//            Log.v("MapsActivity", "Invalid latitude: " + addresses.get(0).getLatitude() +
-//                    "invalid longitude: " + addresses.get(0).getLongitude());
+            System.out.println("IllegalArgumentException");
         }
         Address address = addresses.get(0);
         mMap = googleMap;
@@ -129,6 +129,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         url = url + "?origin=" + Double.toString(address.getLatitude())+","+Double.toString(address.getLongitude());
         url = url + "&destination=McKetta+Department+of+Chemical+Engineering";
         url = url + "&key=AIzaSyA8x3nwHN3lJP7wckZs3Ax23Sea6B786DQ";
+        url = url + "&mode=" + mode;
 
         // Request a string response from the provided URL.
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,

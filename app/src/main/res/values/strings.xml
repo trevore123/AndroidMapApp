@@ -4,4 +4,10 @@
     <string name="button_text">Send</string>
     <string name="edittext_hint">Enter a location</string>
     <string name="googleMaps_api_key">AIzaSyCC_xWftJwhF6wQFa0uz2eq8M69fNbkoDI</string>
+    <string-array name="travel_array">
+        <item>Drive</item>
+        <item>Bike</item>
+        <item>Bus</item>
+        <item>Walk</item>
+    </string-array>
 </resources>
