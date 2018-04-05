@@ -23,7 +23,9 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.android.volley.Response.*;
+import com.google.android.gms.maps.model.PolylineOptions;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -115,6 +117,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LatLng marker = new LatLng(address.getLatitude(), address.getLongitude());
         String markerText = "Zipcode: "+address.getPostalCode();
         mMap.addMarker(new MarkerOptions().position(marker).title(markerText));
+        mMap.moveCamera(CameraUpdateFactory.zoomTo(15));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(marker));
 
 //        final TextView mTextView = (TextView) findViewById(R.id.text);
@@ -134,10 +137,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     public void onResponse(String response) {
                         try {
                             JSONObject reader = new JSONObject(response);
-                            JSONObject polyline = reader.getJSONObject("overview_polyline");
+
+                            JSONArray routes = reader.getJSONArray("routes");
+                            JSONObject first_route = routes.getJSONObject(0);
+
+                            JSONObject polyline = first_route.getJSONObject("overview_polyline");
                             String overview_polyline = polyline.getString("points");
-                            System.out.println("Response is: "+ response);
-                            System.out.println("Polyine is: " + overview_polyline);
+
+                            JSONArray legs = first_route.getJSONArray("legs");
+                            JSONObject first_leg = legs.getJSONObject(0);
+                            String distance = first_leg.getJSONObject("distance").getString("text");
+                            String duration = first_leg.getJSONObject("duration").getString("text");
+
+
+                            //System.out.println("Response is: "+ response);
+                            System.out.println(distance + " " + duration);
+                            PolylineOptions opts = new PolylineOptions();
+                            opts.addAll(decodePoly(overview_polyline));
+                            mMap.addPolyline(opts);
 
                         } catch (JSONException exception){
 //                            //dont do anything
