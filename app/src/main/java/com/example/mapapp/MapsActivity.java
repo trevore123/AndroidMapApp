@@ -1,19 +1,35 @@
 package com.example.mapapp;
 
+import android.app.DownloadManager;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
+import android.nfc.Tag;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.TextView;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.android.gms.common.api.Response;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.android.volley.Response.*;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
+import java.sql.SQLOutput;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -21,10 +37,45 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
 
+    private List<LatLng> decodePoly(String encoded) {
+
+        List<LatLng> poly = new ArrayList<LatLng>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+
+        return poly;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -42,7 +93,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * installed Google Play services and returned to the app.
      */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady(GoogleMap googleMap){
         // Get the message from the intent
         Intent intent = getIntent();
         String location = intent.getStringExtra(MainActivity.LOCATION);
@@ -51,16 +102,55 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         try{
             addresses = geocoder.getFromLocationName(location, 1);
         }
-        catch(IOException exception) {
-
+        catch(IOException exception) { //any I/O issues
+//            Log.v("MapsActivity", "IOException");
+        } catch (IllegalArgumentException exception) { //invalid latitude or longitude values
+//            Log.v("MapsActivity", "Invalid latitude: " + addresses.get(0).getLatitude() +
+//                    "invalid longitude: " + addresses.get(0).getLongitude());
         }
-
         Address address = addresses.get(0);
         mMap = googleMap;
 
         // Add a marker in the entered location and move the camera
         LatLng marker = new LatLng(address.getLatitude(), address.getLongitude());
-        mMap.addMarker(new MarkerOptions().position(marker).title(location));
+        String markerText = "Zipcode: "+address.getPostalCode();
+        mMap.addMarker(new MarkerOptions().position(marker).title(markerText));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(marker));
+
+//        final TextView mTextView = (TextView) findViewById(R.id.text);
+
+
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Volley.newRequestQueue(this);
+        String url ="https://maps.googleapis.com/maps/api/directions/json";
+        url = url + "?origin=" + Double.toString(address.getLatitude())+","+Double.toString(address.getLongitude());
+        url = url + "&destination=McKetta+Department+of+Chemical+Engineering";
+        url = url + "&key=AIzaSyA8x3nwHN3lJP7wckZs3Ax23Sea6B786DQ";
+
+        // Request a string response from the provided URL.
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                new Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        try {
+                            JSONObject reader = new JSONObject(response);
+                            JSONObject polyline = reader.getJSONObject("overview_polyline");
+                            String overview_polyline = polyline.getString("points");
+                            System.out.println("Response is: "+ response);
+                            System.out.println("Polyine is: " + overview_polyline);
+
+                        } catch (JSONException exception){
+//                            //dont do anything
+                        }
+                    }
+                }, new ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                System.out.println("That didn't work!");
+            }
+        });
+
+// Add the request to the RequestQueue.
+        queue.add(stringRequest);
     }
 }
