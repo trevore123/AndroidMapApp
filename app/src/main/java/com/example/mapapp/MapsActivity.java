@@ -1,6 +1,8 @@
 package com.example.mapapp;
 
+import android.app.AlertDialog;
 import android.app.DownloadManager;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
@@ -8,6 +10,7 @@ import android.nfc.Tag;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.android.volley.Request;
@@ -34,6 +37,7 @@ import java.sql.SQLOutput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
@@ -156,6 +160,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             PolylineOptions opts = new PolylineOptions();
                             opts.addAll(decodePoly(overview_polyline));
                             mMap.addPolyline(opts);
+
+                            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MapsActivity.this);
+                            alertDialogBuilder.setMessage("CPE is " + distance +
+                                    " away and will take " + duration + ".");
+
+                            // set dialog message
+                            alertDialogBuilder.setCancelable(false).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                }
+                            });
+
+                            // create alert dialog
+                            AlertDialog alertDialog = alertDialogBuilder.create();
+                            // show it
+                            alertDialog.show();
+
+                            System.out.println(response);
 
                         } catch (JSONException exception){
 //                            //dont do anything
