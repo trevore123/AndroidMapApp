@@ -42,7 +42,11 @@ import java.util.Map;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
+    private static final LatLng cpe_latlng = new LatLng(30.290020,-97.736192);
 
+    /**
+     * Decodes the polyline string and converts it to latitude, longitude points
+     */
     private List<LatLng> decodePoly(String encoded) {
 
         List<LatLng> poly = new ArrayList<LatLng>();
@@ -92,104 +96,115 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
      */
     @Override
-    public void onMapReady(GoogleMap googleMap){
+    public void onMapReady(GoogleMap googleMap) {
         // Get the message from the intent
         Intent intent = getIntent();
         String location = intent.getStringExtra(MainActivity.LOCATION);
         String mode = intent.getStringExtra(MainActivity.MODE);
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
         List<Address> addresses = null;
-        try{
+        try {
             addresses = geocoder.getFromLocationName(location, 1);
-        }
-        catch(IOException exception) { //any I/O issues
-            System.out.println("IOException");
+        } catch (IOException exception) { //any I/O issues
+            System.out.println(exception);
         } catch (IllegalArgumentException exception) { //invalid latitude or longitude values
-            System.out.println("IllegalArgumentException");
+            System.out.println(exception);
         }
-        Address address = addresses.get(0);
-        mMap = googleMap;
+        if (addresses == null || addresses.size() == 0) {
+            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MapsActivity.this);
+            alertDialogBuilder.setMessage("Invalid Address");
 
-        // Add a marker in the entered location and move the camera
-        LatLng marker = new LatLng(address.getLatitude(), address.getLongitude());
-        String markerText = "Zipcode: "+address.getPostalCode();
-        mMap.addMarker(new MarkerOptions().position(marker).title(markerText));
-        mMap.moveCamera(CameraUpdateFactory.zoomTo(15));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(marker));
+            // set dialog message
+            alertDialogBuilder.setCancelable(false).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    finish();
+                }
+            });
 
-//        final TextView mTextView = (TextView) findViewById(R.id.text);
+            // create alert dialog
+            AlertDialog alertDialog = alertDialogBuilder.create();
+            // show it
+            alertDialog.show();
+        }
+        else {
+            Address address = addresses.get(0);
+            mMap = googleMap;
 
-
-        // Instantiate the RequestQueue.
-        RequestQueue queue = Volley.newRequestQueue(this);
-        String url ="https://maps.googleapis.com/maps/api/directions/json";
-        url = url + "?origin=" + Double.toString(address.getLatitude())+","+Double.toString(address.getLongitude());
-        url = url + "&destination=McKetta+Department+of+Chemical+Engineering";
-        url = url + "&key=AIzaSyA8x3nwHN3lJP7wckZs3Ax23Sea6B786DQ";
-        url = url + "&mode=" + mode;
-
-        // Request a string response from the provided URL.
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                new Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        try {
-                            JSONObject reader = new JSONObject(response);
-
-                            JSONArray routes = reader.getJSONArray("routes");
-                            JSONObject first_route = routes.getJSONObject(0);
-
-                            JSONObject polyline = first_route.getJSONObject("overview_polyline");
-                            String overview_polyline = polyline.getString("points");
-
-                            JSONArray legs = first_route.getJSONArray("legs");
-                            JSONObject first_leg = legs.getJSONObject(0);
-                            String distance = first_leg.getJSONObject("distance").getString("text");
-                            String duration = first_leg.getJSONObject("duration").getString("text");
+            // Add a marker in the entered location and move the camera
+            LatLng marker = new LatLng(address.getLatitude(), address.getLongitude());
+            String markerText = "Zipcode: " + address.getPostalCode();
+            mMap.addMarker(new MarkerOptions().position(marker).title(markerText));
+            mMap.moveCamera(CameraUpdateFactory.zoomTo(15));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(marker));
 
 
-                            //System.out.println("Response is: "+ response);
-                            System.out.println(distance + " " + duration);
-                            PolylineOptions opts = new PolylineOptions();
-                            opts.addAll(decodePoly(overview_polyline));
-                            mMap.addPolyline(opts);
+            // Instantiate the RequestQueue.
+            RequestQueue queue = Volley.newRequestQueue(this);
+            String url = "https://maps.googleapis.com/maps/api/directions/json";
+            url = url + "?origin=" + Double.toString(address.getLatitude()) + "," + Double.toString(address.getLongitude());
+            url = url + "&destination=McKetta+Department+of+Chemical+Engineering";
+            url = url + "&key=AIzaSyA8x3nwHN3lJP7wckZs3Ax23Sea6B786DQ";
+            url = url + "&mode=" + mode;
 
-                            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MapsActivity.this);
-                            alertDialogBuilder.setMessage("CPE is " + distance +
-                                    " away and will take " + duration + ".");
+            // Request a string response from the provided URL.
+            StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                    new Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            try {
+                                JSONObject reader = new JSONObject(response);
 
-                            // set dialog message
-                            alertDialogBuilder.setCancelable(false).setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int id) {
-                                }
-                            });
+                                JSONArray routes = reader.getJSONArray("routes");
+                                JSONObject first_route = routes.getJSONObject(0);
 
-                            // create alert dialog
-                            AlertDialog alertDialog = alertDialogBuilder.create();
-                            // show it
-                            alertDialog.show();
+                                JSONObject polyline = first_route.getJSONObject("overview_polyline");
+                                String overview_polyline = polyline.getString("points");
 
-                            System.out.println(response);
+                                JSONArray legs = first_route.getJSONArray("legs");
+                                JSONObject first_leg = legs.getJSONObject(0);
+                                String distance = first_leg.getJSONObject("distance").getString("text");
+                                String duration = first_leg.getJSONObject("duration").getString("text");
 
-                        } catch (JSONException exception){
+
+                                //System.out.println("Response is: "+ response);
+                                System.out.println(distance + " " + duration);
+                                PolylineOptions opts = new PolylineOptions();
+                                opts.addAll(decodePoly(overview_polyline));
+                                mMap.addPolyline(opts);
+                                mMap.addMarker(new MarkerOptions().position(cpe_latlng).title("CPE"));
+
+                                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MapsActivity.this);
+                                alertDialogBuilder.setMessage("CPE is " + distance +
+                                        " away and will take " + duration + ".");
+
+                                // set dialog message
+                                alertDialogBuilder.setCancelable(false).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int id) {
+                                    }
+                                });
+
+                                // create alert dialog
+                                AlertDialog alertDialog = alertDialogBuilder.create();
+                                // show it
+                                alertDialog.show();
+
+                                System.out.println(response);
+
+                            } catch (JSONException exception) {
 //                            //dont do anything
+                            }
                         }
-                    }
-                }, new ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                System.out.println("That didn't work!");
-            }
-        });
+                    }, new ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    System.out.println("That didn't work!");
+                }
+            });
 
 // Add the request to the RequestQueue.
-        queue.add(stringRequest);
+            queue.add(stringRequest);
+        }
     }
 }
